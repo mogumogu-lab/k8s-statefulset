@@ -1,12 +1,13 @@
 apiVersion: apps/v1
-kind: ReplicaSet
+kind: StatefulSet
 metadata:
-  name: user-service-rs
+  name: user-service-stateful
   namespace: app-dev
   labels:
     app.kubernetes.io/name: user-service
     app.kubernetes.io/version: "1.0.0"
 spec:
+  serviceName: user-service-headless  # Required for StatefulSet
   replicas: 3
   selector:
     matchLabels:
@@ -31,6 +32,11 @@ spec:
                   key: PORT
             - name: VERSION
               value: "1.0.0"
+            - name: DATA_DIR
+              value: "/data"
+          volumeMounts:
+            - name: user-data
+              mountPath: /data
           readinessProbe:
             httpGet:
               path: /
@@ -43,3 +49,12 @@ spec:
               port: 3000
             initialDelaySeconds: 30
             periodSeconds: 30
+  # Each pod gets its own PVC
+  volumeClaimTemplates:
+  - metadata:
+      name: user-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
